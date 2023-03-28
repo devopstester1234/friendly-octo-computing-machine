@@ -1,0 +1,11 @@
+---
+kind: pipeline
+type: kubernetes
+name: go
+
+steps:
+- name: test-hello-world
+  image: golang:1.12
+  commands:
+  - cd services/hello-world
+  - go test ./service

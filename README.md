@@ -1,1 +1,2 @@
 # friendly-octo-computing-machine
+[![Build Status](https://drone.jedev.pw/api/badges/devopstester1234/friendly-octo-computing-machine/status.svg)](https://drone.jedev.pw/devopstester1234/friendly-octo-computing-machine)
