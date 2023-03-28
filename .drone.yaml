@@ -2,10 +2,12 @@
 kind: pipeline
 type: kubernetes
 name: go
+service_account_name: drone-runner
+drone_namespace_default: drone-runner
 
 steps:
 - name: test-hello-world
-  image: golang:1.12
+  image: golang:1.20-alpine
   commands:
   - cd services/hello-world
   - go test ./service
