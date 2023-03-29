@@ -30,7 +30,7 @@ steps:
     K3SCONFIG:
       from_secret: k3s_config
   commands:
-  - mkdir -p ~/.kube/config
+  - mkdir -p ~/.kube
   - echo $${K3SCONFIG} > ~/.kube/config
   - kubectl get pods -a
 - name: env-test
