@@ -76,8 +76,8 @@ steps:
   - local_value="test"
   - echo $local_value
   - echo ${local_value}
-  depends_on:
-    - test-k8s-connection
+  # depends_on:
+  #   - test-k8s-connection
 - name: init
   image: golang:1.20-alpine
   pull: if-not-exists
