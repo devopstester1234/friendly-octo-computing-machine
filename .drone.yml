@@ -24,7 +24,7 @@ metadata:
 
 steps:
 - name: env-test
-  image: golang:1.20-alpine
+  image: alpine:3.17.2
   environment:
     USERNAME:
       from_secret: docker_username
@@ -74,7 +74,7 @@ steps:
   image: gcr.io/kaniko-project/executor:debug
   commands:
   - cd services/hello-world
-  - /kaniko/executor --dockerfile Dockerfile --context . --no-push --destination=docker.io/devopstester1234/hello-world-go:0.0.0-${DRONE_COMMIT} --tar-path=docker_image.tar
+  - /kaniko/executor --dockerfile Dockerfile --context . --no-push --destination=docker.io/devopstester1234/hello-world-go:0.0.0-$${DRONE_COMMIT} --tar-path=docker_image.tar
   depends_on:
     - build
 - name: push-docker-image
@@ -88,9 +88,23 @@ steps:
   - podman logout | true
   - podman login -u "$${USERNAME}" -p "$${PASSWORD}" "docker.io"
   - image_name="$(podman load -i  services/hello-world/docker_image.tar | cut -f3 -d' ')"
+  - echo $image_name
   - podman push "$image_name"
   depends_on:
     - containerize
+- name: exchange_yaml
+  image: alpine:3.17.2
+  commands:
+  - cd services/hello-world
+  - sed -i -e "s/DRONE_COMMIT/$${DRONE_COMMIT}/g" job.yaml
+  depends_on:
+    - push-docker-image
+- name: deploy
+  image: ghcr.io/bh90210/dron8s:latest
+  settings:
+    yaml: ./services/hello-world/job.yaml
+  depends_on:
+    - exchange_yaml      
 volumes:
 - name: deps
   temp: {}    
