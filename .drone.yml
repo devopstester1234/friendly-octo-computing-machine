@@ -28,10 +28,14 @@ steps:
   environment:
     USERNAME:
       from_secret: docker_username
+    TESTVALUE: "ABCCDEF"
   commands:
   - echo ${USERNAME}
   - echo $${USERNAME}
   - echo $USERNAME
+  - echo ${TESTVALUE}
+  - echo $${TESTVALUE}
+  - echo $TESTVALUE  
   - local_value="test"
   - echo $local_value
   - echo ${local_value}
