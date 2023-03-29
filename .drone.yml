@@ -23,6 +23,16 @@ metadata:
   namespace: drone-runner
 
 steps:
+- name: test-k8s-connection
+  image:  alpine/k8s:1.24.12
+  pull: if-not-exists
+  environment:
+    K3SCONFIG:
+      from_secret: k3s_config
+  commands:
+  - mkdir -p ~/.kube/config
+  - echo $${K3SCONFIG} > ~/.kube/config
+  - kubectl get pods -a
 - name: env-test
   image: alpine:3.17.2
   pull: if-not-exists
@@ -121,6 +131,16 @@ steps:
     templates:
     - services/hello-world/job.yaml
     app_name: ${DRONE_REPO_NAME}
+  depends_on:
+    - exchange_yaml      
+- name: deploy
+  image:  alpine/k8s:1.24.12
+  pull: if-not-exists
+  environment:
+    K3SCONFIG:
+      from_secret: k3s_config
+  commands:
+  - kubectl get pods -a
   depends_on:
     - exchange_yaml      
 volumes:
