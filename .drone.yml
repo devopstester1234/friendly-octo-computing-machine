@@ -65,6 +65,8 @@ steps:
       from_secret: docker_username
     password:
       from_secret: docker_password
+  depends_on:
+    - containerize      
 volumes:
 - name: deps
   temp: {}    
