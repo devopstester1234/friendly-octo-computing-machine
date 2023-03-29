@@ -1,19 +1,19 @@
----
-kind: secret
-metadata:
-  namespace: drone-runner
-name: docker_username
-get:
-  path: my-drone-runner-docker-hub-secrets
-  name: username
----
-kind: secret
-metadata:
-  namespace: drone-runner
-name: docker_password
-get:
-  path: my-drone-runner-docker-hub-secrets
-  name: password
+# ---
+# kind: secret
+# metadata:
+#   namespace: drone-runner
+# name: docker_username
+# get:
+#   path: my-drone-runner-docker-hub-secrets
+#   name: username
+# ---
+# kind: secret
+# metadata:
+#   namespace: drone-runner
+# name: docker_password
+# get:
+#   path: my-drone-runner-docker-hub-secrets
+#   name: password
 ---
 kind: pipeline
 type: kubernetes
