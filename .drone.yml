@@ -53,20 +53,23 @@ steps:
   image: gcr.io/kaniko-project/executor:debug
   commands:
   - cd services/hello-world
-  - /kaniko/executor --dockerfile Dockerfile --context . --no-push --destination=devopstester1234/hello-world-go:latest --destination=devopstester1234/hello-world-go:0.0.0-${DRONE_COMMIT} --tar-path=docker_image.tar
+  - /kaniko/executor --dockerfile Dockerfile --context . --no-push --destination=docker.io/devopstester1234/hello-world-go:0.0.0-${DRONE_COMMIT} --tar-path=docker_image.tar
   depends_on:
     - build
 - name: push-docker-image
-  image: algreed/drone-load-and-store
-  settings:
-    archive: services/hello-world/docker_image.tar
-    repo: devopstester1234/hello-world-go
-    username:
+  image: mgoltzsche/podman:4.4.3-minmal
+  environment:
+    USERNAME:
       from_secret: docker_username
-    password:
+    PASSWORD:
       from_secret: docker_password
+  commands:
+  - podman logout
+  - podman login -u "${USERNAME}" -p "${PASSWORD}" "docker.io"
+  - image_name="$(podman load -i  services/hello-world/docker_image.tar | cut -f3 -d' ')"
+  - podman push "$image_name"
   depends_on:
-    - containerize      
+    - containerize
 volumes:
 - name: deps
   temp: {}    
