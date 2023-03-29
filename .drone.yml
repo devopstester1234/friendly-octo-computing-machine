@@ -14,7 +14,7 @@
 # get:
 #   path: my-drone-runner-docker-hub-secrets
 #   name: password
----
+# ---
 kind: pipeline
 type: kubernetes
 name: go
