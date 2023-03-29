@@ -78,7 +78,7 @@ steps:
   depends_on:
     - build
 - name: push-docker-image
-  image: mgoltzsche/podman:4.4.3-minmal
+  image: mgoltzsche/podman:4.4.3-minimal
   environment:
     USERNAME:
       from_secret: docker_username
