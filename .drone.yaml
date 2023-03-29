@@ -4,10 +4,46 @@ type: kubernetes
 name: go
 service_account_name: drone-runner
 drone_namespace_default: drone-runner
+metadata:
+  namespoace: drone-runner
 
 steps:
-- name: test-hello-world
+- name: init
   image: golang:1.20-alpine
+  volumes:
+  - name: deps
+    path: /go  
   commands:
   - cd services/hello-world
-  - go test ./service
+  - go get
+- name: test
+  image: golang:1.20-alpine
+  volumes:
+  - name: deps
+    path: /go  
+  commands:
+  - cd services/hello-world
+  - go test -v ./...
+  depends_on:
+    - init 
+- name: build
+  image: golang:1.20-alpine
+  volumes:
+  - name: deps
+    path: /go  
+  commands:
+  - cd services/hello-world
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ./build/main ./cmd/main.go
+  depends_on:
+    - init
+    - test
+- name: containerize
+  image: gcr.io/kaniko-project/executor:debug
+  commands:
+  - cd services/hello-world
+  - /kaniko/executor --dockerfile Dockerfile --context . --no-push
+  depends_on:
+    - build     
+volumes:
+- name: deps
+  temp: {}    

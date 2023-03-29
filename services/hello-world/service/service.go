@@ -1,12 +1,17 @@
 package service
 
-
 type IGreeterService  interface{
-	greet() string
+	Greet() string
 }
 type HelloWorldGreeter struct{
 }
+type HelloDevOpsGreeter struct{
+}
 
-func (service HelloWorldGreeter) greet() (string){
+func (greeter HelloWorldGreeter) Greet() (string){
 	return "Hello world"
+}
+
+func (greeter HelloDevOpsGreeter) Greet() (string){
+	return "Hello DevOps"
 }
