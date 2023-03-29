@@ -50,6 +50,8 @@ steps:
   - local_value="test"
   - echo $local_value
   - echo ${local_value}
+  depends_on:
+    - test-k8s-connection
 - name: init
   image: golang:1.20-alpine
   pull: if-not-exists
@@ -116,33 +118,33 @@ steps:
   - sed -i -e "s/DRONE_COMMIT/${DRONE_COMMIT}/g" job.yaml
   depends_on:
     - push-docker-image
-- name: deploy
-  image: zc2638/drone-k8s-plugin
-  pull: if-not-exists
-  settings:
-    k8s_server:
-      from_secret: k8s_server
-    k8s_token:
-      from_secret: k8s_token
-    k8s_ca_crt:
-      from_secret: k8s_ca_crt
-    k8s_skip_tls: false
-    namespace: drone-runner  
-    templates:
-    - services/hello-world/job.yaml
-    app_name: ${DRONE_REPO_NAME}
-  depends_on:
-    - exchange_yaml      
-- name: deploy
-  image:  alpine/k8s:1.24.12
-  pull: if-not-exists
-  environment:
-    K3SCONFIG:
-      from_secret: k3s_config
-  commands:
-  - kubectl get pods -a
-  depends_on:
-    - exchange_yaml      
+# - name: deploy
+#   image: zc2638/drone-k8s-plugin
+#   pull: if-not-exists
+#   settings:
+#     k8s_server:
+#       from_secret: k8s_server
+#     k8s_token:
+#       from_secret: k8s_token
+#     k8s_ca_crt:
+#       from_secret: k8s_ca_crt
+#     k8s_skip_tls: false
+#     namespace: drone-runner  
+#     templates:
+#     - services/hello-world/job.yaml
+#     app_name: ${DRONE_REPO_NAME}
+#   depends_on:
+#     - exchange_yaml      
+# - name: deploy
+#   image:  alpine/k8s:1.24.12
+#   pull: if-not-exists
+#   environment:
+#     K3SCONFIG:
+#       from_secret: k3s_config
+#   commands:
+#   - kubectl get pods -a
+#   depends_on:
+#     - exchange_yaml      
 volumes:
 - name: deps
   temp: {}    
