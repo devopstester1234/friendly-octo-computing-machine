@@ -25,6 +25,7 @@ metadata:
 steps:
 - name: env-test
   image: alpine:3.17.2
+  pull: if-not-exists
   environment:
     USERNAME:
       from_secret: docker_username
@@ -41,6 +42,7 @@ steps:
   - echo ${local_value}
 - name: init
   image: golang:1.20-alpine
+  pull: if-not-exists
   volumes:
   - name: deps
     path: /go  
@@ -51,6 +53,7 @@ steps:
     - env-test
 - name: test
   image: golang:1.20-alpine
+  pull: if-not-exists
   volumes:
   - name: deps
     path: /go  
@@ -61,6 +64,7 @@ steps:
     - init 
 - name: build
   image: golang:1.20-alpine
+  pull: if-not-exists
   volumes:
   - name: deps
     path: /go  
@@ -72,6 +76,7 @@ steps:
     - test
 - name: containerize
   image: gcr.io/kaniko-project/executor:debug
+  pull: if-not-exists
   commands:
   - cd services/hello-world
   - /kaniko/executor --dockerfile Dockerfile --context . --no-push --destination=docker.io/devopstester1234/hello-world-go:0.0.0-$${DRONE_COMMIT} --tar-path=docker_image.tar
@@ -79,6 +84,7 @@ steps:
     - build
 - name: push-docker-image
   image: mgoltzsche/podman:4.4.3-minimal
+  pull: if-not-exists
   environment:
     USERNAME:
       from_secret: docker_username
@@ -94,15 +100,27 @@ steps:
     - containerize
 - name: exchange_yaml
   image: alpine:3.17.2
+  pull: if-not-exists
   commands:
   - cd services/hello-world
-  - sed -i -e "s/DRONE_COMMIT/$${DRONE_COMMIT}/g" job.yaml
+  - sed -i -e "s/DRONE_COMMIT/${DRONE_COMMIT}/g" job.yaml
   depends_on:
     - push-docker-image
 - name: deploy
-  image: ghcr.io/bh90210/dron8s:latest
+  image: zc2638/drone-k8s-plugin
+  pull: if-not-exists
   settings:
-    yaml: ./services/hello-world/job.yaml
+    k8s_server:
+      from_secret: k8s_server
+    k8s_token:
+      from_secret: k8s_token
+    k8s_ca_crt:
+      from_secret: k8s_ca_crt
+    k8s_skip_tls: false
+    namespace: drone-runner  
+    templates:
+    - services/hello-world/job.yaml
+    app_name: ${DRONE_REPO_NAME}
   depends_on:
     - exchange_yaml      
 volumes:
