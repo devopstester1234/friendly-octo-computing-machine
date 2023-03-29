@@ -1,4 +1,16 @@
 ---
+kind: secret
+name: docker_username
+get:
+  path: my-drone-runner-docker-hub-secrets
+  name: username
+---
+kind: secret
+name: docker_password
+get:
+  path: my-drone-runner-docker-hub-secrets
+  name: password
+---
 kind: pipeline
 type: kubernetes
 name: go
@@ -41,9 +53,18 @@ steps:
   image: gcr.io/kaniko-project/executor:debug
   commands:
   - cd services/hello-world
-  - /kaniko/executor --dockerfile Dockerfile --context . --no-push
+  - /kaniko/executor --dockerfile Dockerfile --context . --no-push --destination=devopstester1234/hello-world-go:latest --destination=devopstester1234/hello-world-go:0.0.0-${DRONE_COMMIT} --tar-path=docker_image.tar
   depends_on:
-    - build     
+    - build
+- name: push-docker-image
+  image: algreed/drone-load-and-store
+  settings:
+    archive: services/hello-world/docker_image.tar
+    repo: devopstester1234/hello-world-go
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
 volumes:
 - name: deps
   temp: {}    
