@@ -85,7 +85,7 @@ steps:
     PASSWORD:
       from_secret: docker_password
   commands:
-  - podman logout
+  - podman logout | true
   - podman login -u "$${USERNAME}" -p "$${PASSWORD}" "docker.io"
   - image_name="$(podman load -i  services/hello-world/docker_image.tar | cut -f3 -d' ')"
   - podman push "$image_name"
