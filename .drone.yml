@@ -15,11 +15,22 @@ kind: pipeline
 type: kubernetes
 name: go
 service_account_name: drone-runner
-drone_namespace_default: drone-runner
 metadata:
-  namespoace: drone-runner
+  namespace: drone-runner
 
 steps:
+- name: env-test
+  image: golang:1.20-alpine
+  environment:
+    USERNAME:
+      from_secret: docker_username
+  commands:
+  - echo ${USERNAME}
+  - echo $${USERNAME}
+  - echo $USERNAME
+  - local_value="test"
+  - echo $local_value
+  - echo ${local_value}
 - name: init
   image: golang:1.20-alpine
   volumes:
@@ -28,6 +39,8 @@ steps:
   commands:
   - cd services/hello-world
   - go mod tidy
+  depends_on:
+    - env-test
 - name: test
   image: golang:1.20-alpine
   volumes:
@@ -65,7 +78,7 @@ steps:
       from_secret: docker_password
   commands:
   - podman logout
-  - podman login -u "${USERNAME}" -p "${PASSWORD}" "docker.io"
+  - podman login -u "$${USERNAME}" -p "$${PASSWORD}" "docker.io"
   - image_name="$(podman load -i  services/hello-world/docker_image.tar | cut -f3 -d' ')"
   - podman push "$image_name"
   depends_on:
