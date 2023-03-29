@@ -27,11 +27,38 @@ steps:
   image:  alpine/k8s:1.24.12
   pull: if-not-exists
   environment:
-    K3SCONFIG:
-      from_secret: k3s_config
+    k8s_server_ca:
+      from_secret: k8s_server_ca
+    k8s_server:
+      from_secret: k8s_server
+    k8s_ca_crt:
+      from_secret: k8s_ca_crt
+    k8s_token:
+      from_secret: k8s_token                  
   commands:
-  - mkdir -p ~/.kube
-  - echo $${K3SCONFIG} > ~/.kube/config
+  - mkdir -p ~/.kube  
+  - |
+    cat > ~/.kube/config <<EOL
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: ${k8s_server_ca}
+        server: ${k8s_server}
+      name: k3s
+    contexts:
+    - context:
+        cluster: k3s
+        user: k3s
+      name: k3s
+    current-context: k3s
+    kind: Config
+    preferences: {}
+    users:
+    - name: k3s
+      user:
+        client-certificate-data: ${k8s_ca_crt}
+        client-key-data: ${k8s_token}
+    EOL
   - kubectl get pods -A
 - name: env-test
   image: alpine:3.17.2
