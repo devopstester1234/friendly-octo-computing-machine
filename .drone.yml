@@ -44,6 +44,8 @@ steps:
   - cp /k3s-config-dir/kubeconfig ~/.kube/config
   - ls -al ~/.kube/
   - ls -al /k3s-config-dir/
+  - cat /k3s-config-dir/kubeconfig
+  - cat ~/.kube/config
   - KUBECONFIG="~/.kube/config" kubectl get pods -A
 - name: env-test
   image: alpine:3.17.2
