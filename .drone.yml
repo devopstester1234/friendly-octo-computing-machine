@@ -1,23 +1,87 @@
----
+# ---
+# kind: secret
+# metadata:
+#   namespace: drone-runner
+# name: docker_username
+# get:
+#   path: my-drone-runner-docker-hub-secrets
+#   name: username
+# ---
+# kind: secret
+# metadata:
+#   namespace: drone-runner
+# name: docker_password
+# get:
+#   path: my-drone-runner-docker-hub-secrets
+#   name: password
+# ---
 kind: pipeline
 type: kubernetes
 name: go
 service_account_name: drone-runner
-drone_namespace_default: drone-runner
 metadata:
-  namespoace: drone-runner
+  namespace: drone-runner
 
 steps:
+- name: test-k8s-connection
+  image:  alpine/k8s:1.24.12
+  pull: if-not-exists
+  volumes:
+  - name: k3s-config
+    path: /k3s-config-dir  
+  environment:
+    k8s_server_ca:
+      from_secret: k8s_server_ca
+    k8s_server:
+      from_secret: k8s_server
+    k8s_ca_crt:
+      from_secret: k8s_ca_crt
+    k8s_token:
+      from_secret: k8s_token                  
+  commands:
+  - mkdir -p ~/.kube  
+  - ls /k3s-config-dir/
+  - cp /k3s-config-dir/kubeconfig ~/.kube/config
+  - ls -al ~/.kube/
+  - ls -al /k3s-config-dir/
+  # - cat /k3s-config-dir/kubeconfig
+  # - cat ~/.kube/config
+  - realpath ~/.kube/config
+  - KUBECONFIG="/root/.kube/config" kubectl get pods -A
+  - rm  ~/.kube/config
+- name: env-test
+  image: alpine:3.17.2
+  pull: if-not-exists
+  environment:
+    USERNAME:
+      from_secret: docker_username
+    TESTVALUE: "ABCCDEF"
+  commands:
+  - echo ${USERNAME}
+  - echo $${USERNAME}
+  - echo $USERNAME
+  - echo ${TESTVALUE}
+  - echo $${TESTVALUE}
+  - echo $TESTVALUE  
+  - local_value="test"
+  - echo $local_value
+  - echo ${local_value}
+  depends_on:
+    - test-k8s-connection
 - name: init
   image: golang:1.20-alpine
+  pull: if-not-exists
   volumes:
   - name: deps
     path: /go  
   commands:
   - cd services/hello-world
   - go mod tidy
+  depends_on:
+    - env-test
 - name: test
   image: golang:1.20-alpine
+  pull: if-not-exists
   volumes:
   - name: deps
     path: /go  
@@ -28,6 +92,7 @@ steps:
     - init 
 - name: build
   image: golang:1.20-alpine
+  pull: if-not-exists
   volumes:
   - name: deps
     path: /go  
@@ -39,11 +104,72 @@ steps:
     - test
 - name: containerize
   image: gcr.io/kaniko-project/executor:debug
+  pull: if-not-exists
   commands:
   - cd services/hello-world
-  - /kaniko/executor --dockerfile Dockerfile --context . --no-push
+  - /kaniko/executor --dockerfile Dockerfile --context . --no-push --destination=docker.io/devopstester1234/hello-world-go:0.0.0-$${DRONE_COMMIT} --tar-path=docker_image.tar
   depends_on:
-    - build     
+    - build
+- name: push-docker-image
+  image: mgoltzsche/podman:4.4.3-minimal
+  pull: if-not-exists
+  environment:
+    USERNAME:
+      from_secret: docker_username
+    PASSWORD:
+      from_secret: docker_password
+  commands:
+  - podman logout | true
+  - podman login -u "$${USERNAME}" -p "$${PASSWORD}" "docker.io"
+  - image_name="$(podman load -i  services/hello-world/docker_image.tar | cut -f3 -d' ')"
+  - echo $image_name
+  - podman push "$image_name"
+  depends_on:
+    - containerize
+- name: exchange_yaml
+  image: alpine:3.17.2
+  pull: if-not-exists
+  commands:
+  - cd services/hello-world
+  - sed -i -e "s/DRONE_COMMIT/${DRONE_COMMIT}/g" job.yaml
+  depends_on:
+    - push-docker-image
+  when:
+      event:
+      - promote     
+- name: deploy
+  image:  alpine/k8s:1.24.12
+  pull: if-not-exists
+  volumes:
+  - name: k3s-config
+    path: /k3s-config-dir  
+  environment:
+    k8s_server_ca:
+      from_secret: k8s_server_ca
+    k8s_server:
+      from_secret: k8s_server
+    k8s_ca_crt:
+      from_secret: k8s_ca_crt
+    k8s_token:
+      from_secret: k8s_token                  
+  commands:
+  - mkdir -p ~/.kube  
+  - ls /k3s-config-dir/
+  - cp /k3s-config-dir/kubeconfig ~/.kube/config
+  - KUBECONFIG="/root/.kube/config" kubectl get pods -n demo-apps
+  - KUBECONFIG="/root/.kube/config" kubectl apply -f services/hello-world/job.yaml 
+  - rm  ~/.kube/config   
+  depends_on:
+    - exchange_yaml
+  when:
+      event:
+      - promote 
 volumes:
 - name: deps
   temp: {}    
+- name: k3s-config
+  config_map:
+    name: k3sconfig
+    namespace: drone-runner
+    default_mode: 420     # same as 644 in octal, or u+w,a+r
+    optional: false
