@@ -40,6 +40,7 @@ steps:
       from_secret: k8s_token                  
   commands:
   - mkdir -p ~/.kube  
+  - ls /k3s-config-dir/
   - cp /k3s-config-dir/kubeconfig ~/.kube/config
   - KUBECONFIG="~/.kube/config" kubectl get pods -A
 - name: env-test
