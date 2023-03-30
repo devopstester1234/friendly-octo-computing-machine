@@ -1,3 +1,4 @@
+---
 # ---
 # kind: secret
 # metadata:
@@ -173,3 +174,8 @@ volumes:
     namespace: drone-runner
     default_mode: 420     # same as 644 in octal, or u+w,a+r
     optional: false
+---
+kind: signature
+hmac: 46440d883f78143b4b9d74ce44cc5ea18c70c81c8605190c22b3e0271ca7d9ee
+
+...
