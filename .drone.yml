@@ -1,34 +1,17 @@
-# ---
-# kind: secret
-# metadata:
-#   namespace: drone-runner
-# name: docker_username
-# get:
-#   path: my-drone-runner-docker-hub-secrets
-#   name: username
-# ---
-# kind: secret
-# metadata:
-#   namespace: drone-runner
-# name: docker_password
-# get:
-#   path: my-drone-runner-docker-hub-secrets
-#   name: password
-# ---
+---
 kind: pipeline
 type: kubernetes
 name: go
 service_account_name: drone-runner
 metadata:
   namespace: drone-runner
-
 steps:
 - name: test-k8s-connection
   image:  alpine/k8s:1.24.12
   pull: if-not-exists
   volumes:
   - name: k3s-config
-    path: /k3s-config-dir  
+    path: /k3s-config-dir
   environment:
     k8s_server_ca:
       from_secret: k8s_server_ca
@@ -37,16 +20,10 @@ steps:
     k8s_ca_crt:
       from_secret: k8s_ca_crt
     k8s_token:
-      from_secret: k8s_token                  
+      from_secret: k8s_token
   commands:
-  - mkdir -p ~/.kube  
-  - ls /k3s-config-dir/
+  - mkdir -p ~/.kube
   - cp /k3s-config-dir/kubeconfig ~/.kube/config
-  - ls -al ~/.kube/
-  - ls -al /k3s-config-dir/
-  # - cat /k3s-config-dir/kubeconfig
-  # - cat ~/.kube/config
-  - realpath ~/.kube/config
   - KUBECONFIG="/root/.kube/config" kubectl get pods -A
   - rm  ~/.kube/config
 - name: env-test
@@ -62,7 +39,7 @@ steps:
   - echo $USERNAME
   - echo ${TESTVALUE}
   - echo $${TESTVALUE}
-  - echo $TESTVALUE  
+  - echo $TESTVALUE
   - local_value="test"
   - echo $local_value
   - echo ${local_value}
@@ -73,7 +50,7 @@ steps:
   pull: if-not-exists
   volumes:
   - name: deps
-    path: /go  
+    path: /go
   commands:
   - cd services/hello-world
   - go mod tidy
@@ -84,18 +61,18 @@ steps:
   pull: if-not-exists
   volumes:
   - name: deps
-    path: /go  
+    path: /go
   commands:
   - cd services/hello-world
   - go test -v ./...
   depends_on:
-    - init 
+    - init
 - name: build
   image: golang:1.20-alpine
   pull: if-not-exists
   volumes:
   - name: deps
-    path: /go  
+    path: /go
   commands:
   - cd services/hello-world
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ./build/main ./cmd/main.go
@@ -136,13 +113,13 @@ steps:
     - push-docker-image
   when:
       event:
-      - promote     
+      - promote
 - name: deploy
   image:  alpine/k8s:1.24.12
   pull: if-not-exists
   volumes:
   - name: k3s-config
-    path: /k3s-config-dir  
+    path: /k3s-config-dir
   environment:
     k8s_server_ca:
       from_secret: k8s_server_ca
@@ -151,25 +128,29 @@ steps:
     k8s_ca_crt:
       from_secret: k8s_ca_crt
     k8s_token:
-      from_secret: k8s_token                  
+      from_secret: k8s_token
   commands:
-  - mkdir -p ~/.kube  
-  - ls /k3s-config-dir/
+  - mkdir -p ~/.kube
   - cp /k3s-config-dir/kubeconfig ~/.kube/config
   - KUBECONFIG="/root/.kube/config" kubectl get pods -n demo-apps
-  - KUBECONFIG="/root/.kube/config" kubectl apply -f services/hello-world/job.yaml 
-  - rm  ~/.kube/config   
+  - KUBECONFIG="/root/.kube/config" kubectl apply -f services/hello-world/job.yaml
+  - rm  ~/.kube/config
   depends_on:
     - exchange_yaml
   when:
       event:
-      - promote 
+      - promote
 volumes:
 - name: deps
-  temp: {}    
+  temp: {}
 - name: k3s-config
   config_map:
     name: k3sconfig
     namespace: drone-runner
     default_mode: 420     # same as 644 in octal, or u+w,a+r
     optional: false
+---
+kind: signature
+hmac: 6c33b537f6fd68be9da1d8b402cb3443e9e21611a131676eabbbed7468235a0c
+
+...
