@@ -1,13 +1,13 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: hello-world-${DRONE_COMMIT} 
-  namespace: drone-runner
+  name: hello-world-DRONE_COMMIT 
+  namespace: demo-apps
 spec:
   template:
     spec:
       containers:
-      - name: drone-runner
-        image: docker.io/devopstester1234/hello-world-go:0.0.0-${DRONE_COMMIT} 
+      - name: hello-world-DRONE_COMMIT
+        image: docker.io/devopstester1234/hello-world-go:0.0.0-DRONE_COMMIT
       restartPolicy: Never
   backoffLimit: 4
