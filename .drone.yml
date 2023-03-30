@@ -48,6 +48,7 @@ steps:
   # - cat ~/.kube/config
   - realpath ~/.kube/config
   - KUBECONFIG="/root/.kube/config" kubectl get pods -A
+  - rm  ~/.kube/config
 - name: env-test
   image: alpine:3.17.2
   pull: if-not-exists
@@ -133,33 +134,35 @@ steps:
   - sed -i -e "s/DRONE_COMMIT/${DRONE_COMMIT}/g" job.yaml
   depends_on:
     - push-docker-image
-# - name: deploy
-#   image: zc2638/drone-k8s-plugin
-#   pull: if-not-exists
-#   settings:
-#     k8s_server:
-#       from_secret: k8s_server
-#     k8s_token:
-#       from_secret: k8s_token
-#     k8s_ca_crt:
-#       from_secret: k8s_ca_crt
-#     k8s_skip_tls: false
-#     namespace: drone-runner  
-#     templates:
-#     - services/hello-world/job.yaml
-#     app_name: ${DRONE_REPO_NAME}
-#   depends_on:
-#     - exchange_yaml      
-# - name: deploy
-#   image:  alpine/k8s:1.24.12
-#   pull: if-not-exists
-#   environment:
-#     K3SCONFIG:
-#       from_secret: k3s_config
-#   commands:
-#   - kubectl get pods -a
-#   depends_on:
-#     - exchange_yaml      
+- name: deploy
+  image:  alpine/k8s:1.24.12
+  pull: if-not-exists
+  volumes:
+  - name: k3s-config
+    path: /k3s-config-dir  
+  environment:
+    k8s_server_ca:
+      from_secret: k8s_server_ca
+    k8s_server:
+      from_secret: k8s_server
+    k8s_ca_crt:
+      from_secret: k8s_ca_crt
+    k8s_token:
+      from_secret: k8s_token                  
+  commands:
+  - mkdir -p ~/.kube  
+  - ls /k3s-config-dir/
+  - cp /k3s-config-dir/kubeconfig ~/.kube/config
+  - ls -al ~/.kube/
+  - ls -al /k3s-config-dir/
+  # - cat /k3s-config-dir/kubeconfig
+  # - cat ~/.kube/config
+  - realpath ~/.kube/config
+  - KUBECONFIG="/root/.kube/config" kubectl get pods -A
+  - KUBECONFIG="/root/.kube/config" kubectl apply -f services/hello-world/job.yaml 
+  - rm  ~/.kube/config   
+  depends_on:
+    - exchange_yaml 
 volumes:
 - name: deps
   temp: {}    
